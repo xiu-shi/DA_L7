@@ -4,14 +4,10 @@ import numpy as np
 # Load data into a Pandas DataFrame
 data = pd.read_csv('your_data_file.csv')
 
-# Calculate the mean
+# Perform data analysis using Pandas and NumPy
 mean = np.mean(data)
-
-# Calculate the median
 median = np.median(data)
-
-# Calculate the mode
-mode = data.mode().iloc[0]
+mode = np.mode(data)
 
 # Display the results
 print("Mean:", mean)
