@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import statsmodels.api as sm
+
 
 ### load data
 time_series_data = pd.read_csv('/Users/janet.xuishi/Documents/DA_L7/DA_L7/L7_term3/L7_ML_CA2/IT_Company_Time_Series.csv')
@@ -126,3 +129,78 @@ for i, column in enumerate(['Software_2', 'Software_3', 'Software_4', 'Software_
 fig.suptitle('Box Plots After Outlier Replacement')
 plt.tight_layout()
 plt.show()
+
+
+### Time Series Forecasting - SARIMAX
+
+
+# Identify the top 3 software products based on total demand
+total_demand = time_series_data.sum(axis=0)
+top_3_products = total_demand.nlargest(3).index
+print(f"Top 3 Software Products: {top_3_products}")
+
+#### Top 3 Software Products: Index(['Software_9', 'Software_12', 'Software_13'], dtype='object')
+
+
+
+
+### Based on our top 3 performing software products: 'Software_9', 'Software_12', 'Software_13'
+### We apply function to fit and forecast using SARIMA models
+
+### Function to fit, forecast, and evaluate using SARIMA models
+def fit_forecast(data, product_name):
+    # Check for missing values in the data
+    print(f"Checking for missing values in {product_name}:")
+    print(data.isnull().sum())
+
+    # Split the data into 75% training and 25% test sets
+    split_index = int(len(data) * 0.75)
+    train_data = data[:split_index]
+    test_data = data[split_index:]
+
+    # Define SARIMA model parameters
+    order = (1, 1, 1)
+    seasonal_order = (1, 1, 1, 12)
+
+    # Fit SARIMA model to the training data
+    model = SARIMAX(train_data, order=order, seasonal_order=seasonal_order)
+    results = model.fit()
+
+    # Forecasting for the test set
+    forecast_steps_test = len(test_data)
+    forecast_test = results.get_forecast(steps=forecast_steps_test)
+    forecast_values_test = forecast_test.predicted_mean
+    forecast_values_test.index = test_data.index
+
+    # Forecasting for the next 52 weeks (one year)
+    forecast_steps_52 = 52
+    forecast_52 = results.get_forecast(steps=forecast_steps_52)
+    forecast_df_52 = pd.DataFrame({
+        'Forecast': forecast_52.predicted_mean.round()
+    })
+    forecast_df_52.index = pd.date_range(start=forecast_values_test.index[-1] + pd.Timedelta(days=1), periods=forecast_steps_52, freq='W')
+
+    # Plotting the results
+    plt.figure(figsize=(14, 7))
+
+    # Observed values and forecast for the test set
+    plt.plot(data.index, data, label='Observed', color='blue')
+    plt.plot(forecast_values_test.index, forecast_values_test, label='Forecast Test Set', color='orange')
+
+    # Forecast for the next 52 weeks
+    plt.plot(forecast_df_52.index, forecast_df_52['Forecast'], label='Forecast 52 weeks', color='green')
+
+    plt.title(f'SARIMAX {product_name} Forecasting')
+    plt.xlabel('Date')
+    plt.ylabel(f'{product_name} Demand')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # Display the table results for the next 52 weeks forecast
+    print(forecast_df_52)
+
+# Apply the function to the top 3 products
+for product in top_3_products:
+    print(f"\nForecasting and evaluating for {product}")
+    fit_forecast(time_series_data[product], product)
