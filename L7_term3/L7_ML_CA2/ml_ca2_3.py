@@ -105,8 +105,46 @@ print(report)
 
 ### 4. Anomaly(outlier) Detection Algorithm
 
+import seaborn as sns
+from sklearn.preprocessing import OneHotEncoder
+
+### load data
+
+csv = '/Users/janet.xuishi/Documents/DA_L7/DA_L7/L7_term3/L7_ML_CA2/IT_Company_System_Issues_Classification.csv'
+data = pd.read_csv(csv)
+
+# Select features for outlier detection
+features = data[['Issue_Type', 'System_Component', 'Customer_Impact', 'Time_to_Resolve_hrs', 'Reported_By', 'Previous_Occurrences', 'Issue_Reported_Month']]
+
+# One-hot encode categorical features
+categorical_features = ['Issue_Type', 'System_Component', 'Customer_Impact', 'Reported_By', 'Issue_Reported_Month']
+one_hot_encoder = OneHotEncoder(sparse=False, drop='first')
+encoded_features = one_hot_encoder.fit_transform(features[categorical_features])
+
+# Combine encoded features with numerical features
+numerical_features = features[['Time_to_Resolve_hrs', 'Previous_Occurrences']].values
+all_features = np.concatenate([encoded_features, numerical_features], axis=1)
+
+# Calculate Z-scores
+z_scores = np.abs((all_features - all_features.mean(axis=0)) / all_features.std(axis=0))
+z_scores
 
 
+# Set a threshold for identifying outliers (commonly 3)
+threshold = 3
+outliers = (z_scores > threshold).any(axis=1)
+
+
+# Add the outlier information to the dataset
+data['Outlier'] = outliers
+
+# Plot the outliers
+plt.figure(figsize=(12, 6))
+sns.scatterplot(data=data, x='Time_to_Resolve_hrs', y='Previous_Occurrences', hue='Outlier', palette={True: 'red', False: 'blue'})
+plt.title('Outliers Detected')
+plt.xlabel('Time to Resolve (hrs)')
+plt.ylabel('Previous Occurrences')
+plt.show()
 
 
 
